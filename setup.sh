@@ -11,6 +11,7 @@ trap 'fail "line $LINENO: $BASH_COMMAND"' ERR
 
 [ "$(id -u)" -ne 0 ] || fail "run this as the normal Chromebook Linux user, not root"
 export DEBIAN_FRONTEND=noninteractive
+getent hosts deb.debian.org >/dev/null && getent hosts claude.ai >/dev/null || fail "Linux can't reach the internet yet. Right-click the Terminal icon at the bottom of the screen, pick 'Shut down Linux', open Terminal again, and re-run this command. Still failing? Restart the Chromebook (and turn off any VPN)."
 
 say "1/5  System packages (curl, Chromium browser)"
 sudo apt-get update -y </dev/null
