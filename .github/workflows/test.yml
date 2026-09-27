@@ -1,0 +1,25 @@
+name: test-on-debian
+on: [push, workflow_dispatch]
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]   # Intel and ARM Chromebooks
+    runs-on: ${{ matrix.runner }}
+    container: debian:bookworm                     # same base as Crostini
+    steps:
+      - name: Crostini-like user (non-root, passwordless sudo)
+        run: |
+          apt-get update -y && apt-get install -y sudo curl ca-certificates
+          useradd -m -s /bin/bash kid
+          echo 'kid ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/kid
+      - name: Run the exact one-liner (twice - must be re-runnable)
+        run: |
+          U="https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/setup.sh"
+          su - kid -c "bash -c \"\$(curl -fsSL $U)\""
+          su - kid -c "bash -c \"\$(curl -fsSL $U)\""
+      - name: Verify config
+        run: |
+          su - kid -c 'cat ~/.claude/settings.json; ~/.local/bin/claude mcp get playwright; ~/.local/bin/claude mcp list'
+          su - kid -c 'grep -q bypassPermissions ~/.claude/settings.json && ~/.local/bin/claude mcp get playwright | grep -q executable-path && echo VERIFIED'
