@@ -22,13 +22,13 @@ say "2/5  Node.js 22"
 NODE_MAJOR=0
 command -v node >/dev/null && NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]')"
 if [ "$NODE_MAJOR" -lt 20 ]; then
-  curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - </dev/null
+  curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
   sudo apt-get install -y nodejs </dev/null
 fi
 node --version
 
 say "3/5  Claude Code"
-curl -fsSL https://claude.ai/install.sh | bash </dev/null
+curl -fsSL https://claude.ai/install.sh | bash
 export PATH="$HOME/.local/bin:$PATH"
 grep -qs 'HOME/.local/bin' "$HOME/.bashrc" || echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
 claude --version </dev/null
