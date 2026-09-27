@@ -6,19 +6,20 @@ jobs:
       fail-fast: false
       matrix:
         runner: [ubuntu-24.04, ubuntu-24.04-arm]   # Intel and ARM Chromebooks
+        image: ['debian:bookworm', 'debian:trixie']  # Crostini container / newer Baguette VM
     runs-on: ${{ matrix.runner }}
-    container: debian:bookworm                     # same base as Crostini
+    container: ${{ matrix.image }}
     steps:
       - name: Crostini-like user (non-root, passwordless sudo)
         run: |
-          apt-get update -y && apt-get install -y sudo curl ca-certificates
+          apt-get update -y && apt-get install -y sudo curl ca-certificates xvfb xauth
           useradd -m -s /bin/bash kid
           echo 'kid ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/kid
-      - name: Run the exact one-liner (twice - must be re-runnable)
+      - name: Run the exact one-liner (1st no display = headless test, 2nd under a display = visible-window test)
         run: |
           U="https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/setup.sh"
           su - kid -c "bash -c \"\$(curl -fsSL $U)\""
-          su - kid -c "bash -c \"\$(curl -fsSL $U)\""
+          su - kid -c "xvfb-run -a bash -c \"\$(curl -fsSL $U)\""
       - name: Verify config
         run: |
           su - kid -c 'cat ~/.claude/settings.json; ~/.local/bin/claude mcp get playwright; ~/.local/bin/claude mcp list'
