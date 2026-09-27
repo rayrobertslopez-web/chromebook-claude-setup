@@ -11,7 +11,7 @@ trap 'fail "line $LINENO: $BASH_COMMAND"' ERR
 
 [ "$(id -u)" -ne 0 ] || fail "run this as the normal Chromebook Linux user, not root"
 export DEBIAN_FRONTEND=noninteractive
-getent hosts deb.debian.org >/dev/null && getent hosts claude.ai >/dev/null || fail "Linux can't reach the internet yet. Right-click the Terminal icon at the bottom of the screen, pick 'Shut down Linux', open Terminal again, and re-run this command. Still failing? Restart the Chromebook (and turn off any VPN)."
+getent hosts deb.debian.org >/dev/null && getent hosts claude.ai >/dev/null || fail "Linux can't reach the internet yet. Check that Chrome on this Chromebook can open google.com, then restart the Chromebook (clock > power > Restart), turn off any VPN, and re-run this command."
 
 say "1/5  System packages (curl, Chromium browser)"
 sudo apt-get update -y </dev/null
@@ -58,21 +58,18 @@ const p = spawn('npx', ['-y', pkg, '--isolated', '--executable-path', exe, ...ex
 let buf = '', id = 0; const waiting = new Map();
 p.stdout.on('data', d => {
   buf += d; let i;
-  while ((i = buf.indexOf('
-')) >= 0) {
+  while ((i = buf.indexOf('\n')) >= 0) {
     const line = buf.slice(0, i); buf = buf.slice(i + 1);
     try { const m = JSON.parse(line); if (m.id && waiting.has(m.id)) { waiting.get(m.id)(m); waiting.delete(m.id); } } catch {}
   }
 });
-const rpc = (method, params) => new Promise(r => { const n = ++id; waiting.set(n, r); p.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: n, method, params }) + '
-'); });
+const rpc = (method, params) => new Promise(r => { const n = ++id; waiting.set(n, r); p.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: n, method, params }) + '\n'); });
 const done = (ok, msg) => { console.log(msg); try { p.kill(); } catch {} process.exit(ok ? 0 : 1); };
 setTimeout(() => done(false, 'BROWSER_FAIL timeout'), 240000);
 p.on('exit', c => done(false, 'BROWSER_FAIL server exited ' + c));
 (async () => {
   await rpc('initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'setup-test', version: '1' } });
-  p.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '
-');
+  p.stdin.write(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) + '\n');
   const r = await rpc('tools/call', { name: 'browser_navigate', arguments: { url: 'https://example.com' } });
   const t = JSON.stringify(r);
   const ok = !r.error && !(r.result && r.result.isError) && /Example Domain/.test(t);
@@ -94,14 +91,10 @@ rm -f "$TEST"
 claude mcp remove playwright -s user </dev/null >/dev/null 2>&1 || true
 # Pin the display so the browser window still shows if Claude starts before ChromeOS's display bridge is up.
 # shellcheck disable=SC2086
-claude mcp add -e DISPLAY="${DISPLAY:-:0}" -e WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-0}" -s user   playwright -- npx -y "$PW" --executable-path "$CHROME" $EXTRA </dev/null
+claude mcp add -e DISPLAY="${DISPLAY:-:0}" -e WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-0}" -s user \
+  playwright -- npx -y "$PW" --executable-path "$CHROME" $EXTRA </dev/null
 
 trap - ERR
-printf '
-[1;32mALL SET.[0m Close this Terminal window, open Terminal again, and type:  claude
-'
-printf 'First time only: pick a color theme, then sign in to Claude in the browser tab it opens.
-'
-printf 'If the sign-in page shows a code instead, copy it and paste it into Terminal with Ctrl+Shift+V.
-
-'
+printf '\n\033[1;32mALL SET.\033[0m Close this Terminal window, open Terminal again, and type:  claude\n'
+printf 'First time only: pick a color theme, then sign in to Claude in the browser tab it opens.\n'
+printf 'If the sign-in page shows a code instead, copy it and paste it into Terminal with Ctrl+Shift+V.\n\n'
